@@ -1,5 +1,9 @@
 # SDDM Ed25519 Token Auth
 
+<p align="center">
+  <img src="cover.png" alt="Project Cover" width="600">
+</p>
+
 SDDM Ed25519 Token Auth adds a separate token-based login path to SDDM using an external Ed25519 challenge-response token.
 
 The normal password login path is kept intact. The token path uses a dedicated PAM service called `sddm-token`, so password authentication and token authentication remain separated.
