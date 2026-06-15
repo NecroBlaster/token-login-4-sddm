@@ -1,8 +1,12 @@
-# SDDM Ed25519 Token Auth
+#  Physical Login Authenticator - DIY hardware token
 
 <p align="center">
   <img src="cover.png" alt="Project Cover" width="600">
 </p>
+
+An experimental authentication project for Linux login greeters, inspired by hardware security keys like YubiKey and Google Titan.
+It turns a Raspberry Pi Zero 2 W into an external USB token for local challenge-response authentication. Rather than replacing password login, it adds a separate authentication path in the greeter, so the system can distinguish between standard password login and token-based login.
+Built for learning and prototyping, the project explores how Linux authentication, PAM, USB communication, and secure challenge-response mechanisms fit together.
 
 SDDM Ed25519 Token Auth adds a separate token-based login path to SDDM using an external Ed25519 challenge-response token.
 
