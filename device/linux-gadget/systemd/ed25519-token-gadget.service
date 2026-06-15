@@ -1,0 +1,12 @@
+[Unit]
+Description=Ed25519 token USB gadget
+After=systemd-modules-load.service
+Before=ed25519-token-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ed25519-token-gadget
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

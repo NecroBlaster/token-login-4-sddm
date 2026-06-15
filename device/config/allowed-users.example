@@ -1,0 +1,3 @@
+# One allowed Linux username per line.
+# Replace this with the account names that may authenticate using the token.
+example_user

@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+import base64
+import configparser
+import json
+import re
+import sys
+import time
+from pathlib import Path
+
+import serial
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+CONFIG_PATH = Path('/etc/ed25519-token-auth/device.conf')
+USER_RE = re.compile(r'^[a-z_][a-z0-9_-]{0,31}$')
+
+
+def log(message: str) -> None:
+    print(f'ed25519-token-daemon: {message}', file=sys.stderr, flush=True)
+
+
+def load_config():
+    cfg = configparser.ConfigParser()
+    cfg.read(CONFIG_PATH)
+    private_key = cfg.get('token', 'private_key', fallback='/etc/ed25519-token-auth/private.key')
+    allowed_users = cfg.get('token', 'allowed_users', fallback='/etc/ed25519-token-auth/allowed-users')
+    prefix = cfg.get('token', 'protocol_prefix', fallback='sddm-ed25519-token-v1').encode('utf-8')
+    service = cfg.get('token', 'allowed_service', fallback='sddm-token')
+    device = cfg.get('serial', 'device', fallback='/dev/ttyGS0')
+    baudrate = cfg.getint('serial', 'baudrate', fallback=115200)
+    return Path(private_key), Path(allowed_users), prefix, service, device, baudrate
+
+
+def read_allowed_users(path: Path) -> set[str]:
+    users = set()
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        users.add(line)
+    return users
+
+
+def make_message(prefix: bytes, user: str, service: str, challenge: bytes) -> bytes:
+    return prefix + b'\x00' + user.encode('utf-8') + b'\x00' + service.encode('utf-8') + b'\x00' + challenge
+
+
+def response(obj: dict) -> bytes:
+    return (json.dumps(obj, separators=(',', ':')) + '\n').encode('utf-8')
+
+
+def handle_request(raw: bytes, private_key: Ed25519PrivateKey, allowed_users: set[str], prefix: bytes, allowed_service: str) -> bytes:
+    try:
+        req = json.loads(raw.decode('utf-8'))
+    except Exception:
+        return response({'ok': False, 'error': 'invalid_json'})
+
+    if req.get('v') != 1:
+        return response({'ok': False, 'error': 'unsupported_version'})
+    if req.get('op') != 'sign':
+        return response({'ok': False, 'error': 'unsupported_operation'})
+
+    user = req.get('user', '')
+    service = req.get('service', '')
+
+    if not USER_RE.match(user):
+        return response({'ok': False, 'error': 'invalid_user'})
+    if user not in allowed_users:
+        return response({'ok': False, 'error': 'user_not_allowed'})
+    if service != allowed_service:
+        return response({'ok': False, 'error': 'service_not_allowed'})
+
+    try:
+        challenge = base64.b64decode(req.get('challenge', ''), validate=True)
+    except Exception:
+        return response({'ok': False, 'error': 'invalid_challenge'})
+
+    if len(challenge) < 32:
+        return response({'ok': False, 'error': 'challenge_too_short'})
+
+    message = make_message(prefix, user, service, challenge)
+    signature = private_key.sign(message)
+
+    return response({
+        'ok': True,
+        'alg': 'Ed25519',
+        'signature': base64.b64encode(signature).decode('ascii'),
+    })
+
+
+def main() -> int:
+    private_path, allowed_path, prefix, allowed_service, device, baudrate = load_config()
+
+    private_key = Ed25519PrivateKey.from_private_bytes(private_path.read_bytes())
+    log(f'using serial device {device}')
+
+    while True:
+        try:
+            allowed_users = read_allowed_users(allowed_path)
+            with serial.Serial(device, baudrate=baudrate, timeout=None) as ser:
+                log('ready')
+                while True:
+                    line = ser.readline()
+                    if not line:
+                        continue
+                    ser.write(handle_request(line, private_key, allowed_users, prefix, allowed_service))
+                    ser.flush()
+        except Exception as exc:
+            log(f'error: {exc}')
+            time.sleep(1)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

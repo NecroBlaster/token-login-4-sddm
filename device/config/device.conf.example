@@ -1,0 +1,17 @@
+[token]
+private_key = /etc/ed25519-token-auth/private.key
+public_key = /etc/ed25519-token-auth/public.key
+allowed_users = /etc/ed25519-token-auth/allowed-users
+protocol_prefix = sddm-ed25519-token-v1
+allowed_service = sddm-token
+
+[serial]
+device = /dev/ttyGS0
+baudrate = 115200
+
+[usb]
+idVendor = 0x1d6b
+idProduct = 0x0104
+manufacturer = Ed25519Token
+product = SDDM Ed25519 Token
+serial = CHANGE_ME_TOKEN_SERIAL

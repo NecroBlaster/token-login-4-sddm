@@ -1,0 +1,14 @@
+#%PAM-1.0
+# Dedicated PAM service for SDDM token login.
+# Keep /etc/pam.d/sddm unchanged for normal password login.
+
+auth      requisite                       pam_nologin.so
+auth      [success=1 ignore=1 default=die] pam_exec.so quiet type=auth /usr/local/libexec/pam-ed25519-token
+auth      requisite                       pam_deny.so
+auth      required                        pam_permit.so
+
+account   include                         system-local-login
+
+password  required                        pam_deny.so
+
+session   include                         system-local-login

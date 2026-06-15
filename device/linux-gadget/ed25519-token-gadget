@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GADGET_DIR="/sys/kernel/config/usb_gadget/ed25519-token"
+UDC_NAME="${UDC_NAME:-$(ls /sys/class/udc | head -n1)}"
+CONFIG_FILE="${CONFIG_FILE:-/etc/ed25519-token-auth/device.conf}"
+
+read_config_value() {
+    local key="$1"
+    local fallback="$2"
+    if [[ -r "$CONFIG_FILE" ]]; then
+        awk -F= -v key="$key" '
+            $1 ~ "^[[:space:]]*" key "[[:space:]]*$" {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2);
+                print $2;
+                found=1;
+                exit;
+            }
+            END { if (!found) exit 1 }
+        ' "$CONFIG_FILE" 2>/dev/null || printf '%s\n' "$fallback"
+    else
+        printf '%s\n' "$fallback"
+    fi
+}
+
+ID_VENDOR="${ID_VENDOR:-$(read_config_value idVendor 0x1d6b)}"
+ID_PRODUCT="${ID_PRODUCT:-$(read_config_value idProduct 0x0104)}"
+MANUFACTURER="${MANUFACTURER:-$(read_config_value manufacturer Ed25519Token)}"
+PRODUCT="${PRODUCT:-$(read_config_value product 'SDDM Ed25519 Token')}"
+SERIAL="${SERIAL:-$(read_config_value serial CHANGE_ME_TOKEN_SERIAL)}"
+
+if [[ ! -d /sys/kernel/config/usb_gadget ]]; then
+    modprobe libcomposite
+fi
+
+if [[ -d "$GADGET_DIR" ]]; then
+    if [[ -f "$GADGET_DIR/UDC" ]]; then
+        echo "" > "$GADGET_DIR/UDC" || true
+    fi
+    rm -rf "$GADGET_DIR"
+fi
+
+mkdir -p "$GADGET_DIR"
+cd "$GADGET_DIR"
+
+echo "$ID_VENDOR" > idVendor
+echo "$ID_PRODUCT" > idProduct
+
+echo 0x0200 > bcdUSB
+echo 0x0100 > bcdDevice
+
+mkdir -p strings/0x409
+echo "$SERIAL" > strings/0x409/serialnumber
+echo "$MANUFACTURER" > strings/0x409/manufacturer
+echo "$PRODUCT" > strings/0x409/product
+
+mkdir -p configs/c.1/strings/0x409
+echo "CDC ACM" > configs/c.1/strings/0x409/configuration
+echo 250 > configs/c.1/MaxPower
+
+mkdir -p functions/acm.usb0
+ln -s functions/acm.usb0 configs/c.1/
+
+echo "$UDC_NAME" > UDC

@@ -1,0 +1,11 @@
+[token]
+device = /dev/ed25519-token
+timeout_seconds = 3
+
+[security]
+key_dir = /etc/ed25519-token-auth/keys
+allowed_service = sddm-token
+protocol_prefix = sddm-ed25519-token-v1
+
+[serial]
+baudrate = 115200

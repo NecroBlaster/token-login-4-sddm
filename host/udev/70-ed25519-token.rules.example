@@ -1,0 +1,2 @@
+# Copy to /etc/udev/rules.d/70-ed25519-token.rules and replace CHANGE_ME_TOKEN_SERIAL.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1d6b", ATTRS{idProduct}=="0104", ATTRS{manufacturer}=="Ed25519Token", ATTRS{product}=="SDDM Ed25519 Token", ATTRS{serial}=="CHANGE_ME_TOKEN_SERIAL", SYMLINK+="ed25519-token", OWNER="root", GROUP="root", MODE="0600", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1"
