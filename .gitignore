@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build outputs
+build/
+cmake-build-*/
+*.o
+*.so
+*.a
+
+# Logs and crash dumps
+*.log
+*.zst
+core.*
+coredump*
+
+# Secrets and real keys
+private.key
+*.private
+*.key
+!*.pub.example
+*.pub
+!/examples/*.md
+
+# Local backups
+*.bak
+*.backup
+*.orig
+/root/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local archives
+*.zip
+*.tar
+*.tar.gz
